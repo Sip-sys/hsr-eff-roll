@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131d">
+  <meta name="description" content="Estimate how much of an Honkai: Star Rail relic roll budget a target build requires.">
+  <title>HSR Effective Roll Budget</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="eyebrow"><span class="eyebrow-dot"></span> HONKAI: STAR RAIL · BUILD PLANNER</div>
+      <h1>Effective Roll Budget</h1>
+      <p>Turn target stats into relic roll requirements. Account for main-stat contributions, blocked substats, stat value weights, and drop weights.</p>
+      <div class="hero-actions">
+        <button id="acheronPreset" class="button button-primary" type="button">Load Acheron example</button>
+        <button id="resetButton" class="button button-quiet" type="button">Reset</button>
+      </div>
+    </header>
+
+    <section class="top-grid" aria-label="Roll budget settings and result">
+      <article class="card budget-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">01 / BUDGET</span>
+            <h2>Available rolls</h2>
+          </div>
+          <span class="icon-chip" aria-hidden="true">✦</span>
+        </div>
+        <label class="field-label" for="rollBudget">Effective roll budget</label>
+        <div class="budget-input-wrap">
+          <input id="rollBudget" class="large-number" type="number" min="0" step="1" value="48" inputmode="decimal">
+          <span>rolls</span>
+        </div>
+        <p class="helper">The example starts at 48. A theoretical 54 roll opportunities assumes six +15 five-star relics with four starting substats. This is the denominator for the percentage.</p>
+        <div class="budget-context">
+          <span class="context-icon">i</span>
+          <span>Stat weights turn raw substat rolls into effective-roll equivalents.</span>
+        </div>
+      </article>
+
+      <article class="card result-card" aria-live="polite">
+        <div class="result-topline">
+          <div>
+            <span class="section-kicker">BUILD REQUIREMENT</span>
+            <div class="result-number"><span id="resultPct">0%</span><span class="result-label">of budget</span></div>
+          </div>
+          <span id="statusPill" class="status-pill">Add targets</span>
+        </div>
+        <div class="meter" role="img" aria-label="Required effective rolls compared with the selected budget">
+          <div id="meterFill" class="meter-fill"></div>
+          <div class="meter-overflow-mark" aria-hidden="true"></div>
+        </div>
+        <div class="result-details">
+          <div><span id="effectiveNeeded">0</span><small>effective rolls needed</small></div>
+          <div><span id="rawNeeded">0</span><small>raw roll equivalents</small></div>
+          <div><span id="mainChance">100%</span><small>selected main-stat chance</small></div>
+        </div>
+        <p id="resultNote" class="result-note">Add target stats to calculate the roll budget.</p>
+      </article>
+    </section>
+
+    <section class="card section-card">
+      <div class="section-heading section-heading-wrap">
+        <div>
+          <span class="section-kicker">02 / TARGET</span>
+          <h2>Build stat goals</h2>
+          <p class="section-description">Enter the final target and the amount already supplied by base stats, teammates, traces, and set bonuses. Main-stat contributions are added below.</p>
+        </div>
+        <button id="addStatButton" class="button button-secondary" type="button"><span aria-hidden="true">＋</span> Add stat</button>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table goals-table">
+          <thead>
+            <tr>
+              <th scope="col">Stat</th>
+              <th scope="col">Target</th>
+              <th scope="col">Base / buffs</th>
+              <th scope="col">Roll value</th>
+              <th scope="col">Stat weight</th>
+              <th scope="col">Need from substats</th>
+              <th scope="col">Effective rolls</th>
+              <th scope="col"><span class="sr-only">Remove</span></th>
+            </tr>
+          </thead>
+          <tbody id="goalsBody"></tbody>
+        </table>
+      </div>
+      <div class="table-footnote"><span class="legend-dot"></span> Stat weight is relative build value: 1.00 counts fully, 0.75 counts as three-quarters of an effective roll.</div>
+    </section>
+
+    <section class="card section-card">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">03 / MAIN STATS</span>
+          <h2>Equipped main stats</h2>
+          <p class="section-description">Main stats contribute directly toward your targets and prevent the same stat from appearing as a substat on that piece.</p>
+        </div>
+      </div>
+      <div class="main-grid" id="mainSlots"></div>
+      <div class="main-summary">
+        <span class="summary-icon">↗</span>
+        <span id="blockedSummary">Choose main stats to see their contribution and substat restrictions.</span>
+      </div>
+    </section>
+
+    <section class="card section-card advanced-card">
+      <details>
+        <summary>
+          <span><span class="section-kicker">04 / ADVANCED</span><strong>Drop weights</strong><small>Adjust main-stat odds and substat pool weights</small></span>
+          <span class="chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="advanced-content">
+          <div>
+            <h3>Main-stat drop chance</h3>
+            <p class="section-description">Chance for the exact main stat you intend to use on each slot. Head and hands are fixed at 100%. Values are editable estimates.</p>
+            <div id="mainWeights" class="weight-list main-weight-list"></div>
+          </div>
+          <div>
+            <h3>Substat selection weights</h3>
+            <p class="section-description">Relative weights used when the relic generates its four distinct substat lines. A main stat removes that stat from its piece's pool.</p>
+            <div id="subWeights" class="weight-list sub-weight-list"></div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="card section-card breakdown-card">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">05 / CHECK</span>
+          <h2>Roll breakdown</h2>
+          <p class="section-description">“Expected rolls” uses your entered roll value. Whole hits round up and can still miss a target when the actual relic roll tier is low.</p>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table breakdown-table">
+          <thead>
+            <tr>
+              <th scope="col">Stat</th>
+              <th scope="col">Main-stat contribution</th>
+              <th scope="col">Expected rolls</th>
+              <th scope="col">Whole hits</th>
+              <th scope="col">Pieces that can roll it</th>
+              <th scope="col">Expected pieces with a line*</th>
+            </tr>
+          </thead>
+          <tbody id="breakdownBody"></tbody>
+        </table>
+      </div>
+      <p class="small-note">*Estimated from four distinct substat lines using the configured weighted pool. This describes a random six-piece set before farming/selecting upgrades; it is not a completion probability.</p>
+    </section>
+
+    <footer class="footer">
+      <span>Runs locally in your browser · no account or server required</span>
+      <span>For planning only; relic roll quality and character combat conditions can vary.</span>
+    </footer>
+  </main>
+  <script src="calculator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
